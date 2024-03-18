@@ -1,16 +1,26 @@
 [org 0x7C00]
 
-section .data
-    welcome db 'Hello, World!', 0
-    DISK db 0
-
-; Save disk number for later
-mov [DISK], dl
+mov [DISK], dl  ; Save disk number.
 
 ; Set video mode to mode 3 (80x25 text mode)
 mov ah, 0x00
 mov al, 0x03
 int 0x10
+
+; Load first 127 sectors into RAM (Broken: Why tf cant i read more the 1 sector?)
+mov ax, 0
+mov es, ax      ; SEG
+mov ah, 0x2
+mov al, 10      ; Sectors to read
+mov bx, 0x7E00  ; OFF
+mov dl, [DISK]  ; Disk Number
+mov ch, 0       ; Cylinder
+mov dh, 0       ; Head
+mov cl, 2       ; Start Sector (2 = First Kernel Sector)
+int 0x13
+
+jc disk_error   ; Jump to disk_error if carry flag is set (indicates error)
+
 
 ; Set up stack
 mov bp, 0x7C00
@@ -21,27 +31,28 @@ in al, 0x92
 or al, 2
 out 0x92, al
 
-jmp loader
 
-loader:
-    mov si, welcome
-    call puts
-    jmp $
+disk_error:
+    mov si, error_message   ; Load address of error message into SI
+    call puts               ; Call puts to print error message
+    jmp $                   ; Loop indefinitely
 
-; Internal print function
+error_message db 'Failed To Read Disk!', 0
+
 puts:
-    pusha
+    pusha               ; Save registers
 next_char:
-    lodsb
-    or al, al
-    jz done
-    mov ah, 0x0E
-    int 0x10
-    jmp next_char
+    lodsb               ; Load byte at SI into AL, increment SI
+    or al, al           ; Check if AL is zero (end of string)
+    jz done             ; If zero, we're done
+    mov ah, 0x0E        ; Print character (Teletype out)
+    int 0x10            ; BIOS interrupt for video services
+    jmp next_char       ; Loop back to print the next character
 done:
-    popa
-    ret
+    popa                ; Restore registers
+    ret                 ; Return from subroutine
 
+DISK db 0        ; Define the disk number
 
 times 510-($-$$) db 0
 dw 0xaa55
