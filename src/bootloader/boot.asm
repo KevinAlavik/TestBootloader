@@ -1,7 +1,7 @@
 [org 0x7C00]
 
 section .data
-    welcome db 'Test Bootloader v0.0.1', 0
+    welcome db 'Hello, World!', 0
     DISK db 0
 
 ; Save disk number for later
@@ -21,9 +21,9 @@ in al, 0x92
 or al, 2
 out 0x92, al
 
-jmp main
+jmp loader
 
-main:
+loader:
     mov si, welcome
     call puts
     jmp $
